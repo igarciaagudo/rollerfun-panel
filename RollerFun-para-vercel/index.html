@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RollerFun · Panel financiero</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f7f6f3;--card:#fff;--ink:#1a1a18;--ink2:#5f5e5a;--ink3:#8a8983;--line:#e3e1da;--accent:#185FA5;--accentbg:#E6F1FB;--ok:#27500A;--okbg:#EAF3DE;--warn:#854F0B;--warnbg:#FAEEDA;--bad:#A32D2D;--badbg:#FCEBEB;}
+[data-theme=dark]{--bg:#191917;--card:#232320;--ink:#eceae4;--ink2:#b0aea6;--ink3:#7d7c76;--line:#3a3936;--accent:#85B7EB;--accentbg:#0C447C;--ok:#C0DD97;--okbg:#27500A;--warn:#FAC775;--warnbg:#633806;--bad:#F09595;--badbg:#791F1F;}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;font-weight:600;margin:0}
+.spacer{flex:1}
+button{font:inherit;font-size:13px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--ink3)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] button.pri{color:#04121f}
+nav{display:flex;gap:2px;padding:8px 16px;flex-wrap:wrap;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+nav button{border:none;background:none;padding:7px 12px;border-radius:8px;font-size:14px;color:var(--ink2)}
+nav button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+nav button .b{display:inline-block;min-width:18px;text-align:center;background:var(--badbg);color:var(--bad);border-radius:10px;font-size:11px;padding:0 5px;margin-left:4px;font-weight:700}
+main{max-width:1500px;margin:0 auto;padding:18px 20px 60px}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:10px 0;font-size:13px}
+.filtros button{padding:4px 10px;font-size:12.5px}
+.filtros button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-theme=dark] .filtros button.on{color:#04121f}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card .l{font-size:12.5px;color:var(--ink2);margin-bottom:2px}
+.card .v{font-size:24px;font-weight:650;letter-spacing:-.02em}
+.card .s{font-size:12px;color:var(--ink3);margin-top:3px}
+.card.acc{background:var(--accentbg);border-color:transparent}
+.card.acc .l,.card.acc .v,.card.acc .s{color:var(--accent)}
+.card.bad{background:var(--badbg);border-color:transparent}
+.card.bad .l,.card.bad .v,.card.bad .s{color:var(--bad)}
+.card.good{background:var(--okbg);border-color:transparent}
+.card.good .l,.card.good .v,.card.good .s{color:var(--ok)}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.badbox{background:var(--badbg);color:var(--bad);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.okbox{background:var(--okbg);color:var(--ok);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.note{font-size:12.5px;color:var(--ink3);margin:6px 0}
+h2{font-size:17px;font-weight:650;margin:26px 0 8px}
+h3{font-size:14.5px;font-weight:650;margin:18px 0 6px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink3);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.neg{color:var(--bad)}.pos{color:var(--ok)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.dot.g{background:#639922}.dot.a{background:#EF9F27}.dot.r{background:#E24B4A}
+.chart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;position:relative;height:420px;width:100%}
+.chart.tall{height:500px}
+select,input[type=text],input[type=number],input[type=date],input[type=month],input[type=password]{font:inherit;font-size:13.5px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin:2px 0}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:34px;text-align:center;color:var(--ink2);margin:12px 0;background:var(--card)}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+.pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:12px;font-weight:600}
+.pill.man{background:var(--accentbg);color:var(--accent)}
+.pill.est{background:var(--badbg);color:var(--bad)}
+.pill.pun{background:var(--warnbg);color:var(--warn)}
+.txt{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:14px;margin:12px 0}
+.txt p{margin:8px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.mut{color:var(--ink3);font-size:12.5px}
+.tag{font-size:11px;background:var(--line);border-radius:6px;padding:1px 6px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>RollerFun</h1>
+  <span class="spacer"></span>
+  <span class="mut" id="syncState"></span>
+  <button id="btnUndo" style="display:none"></button>
+  <button id="btnSave">Guardar copia (JSON)</button>
+  <button id="btnLoad">Cargar copia</button>
+  <button id="btnTheme" title="Modo claro/oscuro">☾</button>
+  <input type="file" id="fileLoad" accept=".json" style="display:none">
+</header>
+<nav id="nav"></nav>
+<main id="app"></main>
+<script src="app.js"></script>
+</body>
+</html>
