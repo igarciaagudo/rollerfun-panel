@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RollerFun · Panel financiero</title>
+<style>
+:root{--bg:#f7f6f3;--card:#fff;--ink:#1a1a18;--ink2:#5f5e5a;--ink3:#8a8983;--line:#e3e1da;--accent:#185FA5;--accentbg:#E6F1FB;--ok:#27500A;--okbg:#EAF3DE;--bad:#A32D2D;--badbg:#FCEBEB;--warn:#854F0B;--warnbg:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
+header{display:flex;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:18px;margin:0;font-weight:600}
+.sp{flex:1}
+main{max-width:1000px;margin:0 auto;padding:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+h2{font-size:16px;margin:0 0 10px}
+button{font:inherit;font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;color:var(--ink)}
+button:hover{border-color:var(--ink3)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+input{font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--card);color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+pre{background:#f3f2ee;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:420px;font-size:12px;margin:10px 0 0}
+.ok{background:var(--okbg);color:var(--ok);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.bad{background:var(--badbg);color:var(--bad);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.warn{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:8px 0}
+.mut{color:var(--ink3);font-size:12.5px}
+code{background:#f3f2ee;padding:1px 5px;border-radius:4px;font-size:12.5px}
+ol{padding-left:22px}li{margin:5px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;color:var(--ink3);padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header>
+  <h1>RollerFun</h1>
+  <span class="mut">v2 · conectado a Playoff</span>
+  <span class="sp"></span>
+  <span class="mut" id="estado"></span>
+</header>
+<main>
+
+<div class="card" id="cPaso0">
+  <h2>Paso 1 · Configurar Playoff en Vercel</h2>
+  <p class="mut">Esto se hace una sola vez, y lo haces tú: las credenciales no pasan por el chat. En Vercel, en el proyecto <code>rollerfun-panel</code> → <b>Settings</b> → <b>Environment Variables</b>, añade estas cuatro:</p>
+  <ol>
+    <li><code>PLAYOFF_HOST</code> — tu dominio de Playoff, sin <code>https://</code>. Ejemplo: <code>rollerfun.playoffinformatica.com</code></li>
+    <li><code>PLAYOFF_USER</code> — el usuario que te dio Playoff para la API</li>
+    <li><code>PLAYOFF_PASS</code> — su contraseña</li>
+    <li><code>PANEL_CLAVE</code> — una clave que inventas tú, para que este panel no lo abra cualquiera</li>
+  </ol>
+  <p class="mut">Marca las cuatro para <b>Production</b>. Después vuelve aquí y dale a Comprobar.</p>
+</div>
+
+<div class="card">
+  <h2>Paso 2 · Comprobar la conexión</h2>
+  <div class="row">
+    <input id="clave" type="password" placeholder="Clave del panel" style="width:220px">
+    <button class="pri" id="bPing">Comprobar</button>
+    <button id="bCat">Ver catálogos</button>
+    <button id="bAlu">Ver alumnos</button>
+    <button id="bReb">Ver recibos de los 3 primeros</button>
+    <button id="bDiag">Diagnóstico</button>
+  </div>
+  <div id="salida"></div>
+  <pre id="json" style="display:none"></pre>
+</div>
+
+<div class="card">
+  <h2>Paso 3 · Probar una ruta suelta</h2>
+  <p class="mut">Para explorar sin volver a desplegar. Solo lee, nunca escribe.</p>
+  <div class="row">
+    <input id="ruta" type="text" placeholder="colegiats/rebuts" style="width:260px">
+    <input id="qs" type="text" placeholder="idColegiat=123" style="width:260px">
+    <button id="bProbar">Probar</button>
+  </div>
+  <div id="salida2"></div>
+  <pre id="json2" style="display:none"></pre>
+</div>
+
+</main>
+<script>
+var $=function(s){return document.querySelector(s)};
+var K='rf2_clave';
+try{ if(localStorage.getItem(K)) $('#clave').value=localStorage.getItem(K); }catch(e){}
+
+function msg(cls,txt){ $('#salida').innerHTML='<div class="'+cls+'">'+txt+'</div>'; }
+function vol(o){ var p=$('#json'); p.style.display='block'; p.textContent=JSON.stringify(o,null,1).slice(0,120000); }
+
+async function api(accion,extra){
+  var clave=$('#clave').value;
+  try{ localStorage.setItem(K,clave); }catch(e){}
+  var u='/api/playoff?accion='+encodeURIComponent(accion);
+  Object.keys(extra||{}).forEach(function(k){ u+='&'+k+'='+encodeURIComponent(extra[k]); });
+  var r=await fetch(u,{headers:{'x-panel-clave':clave}});
+  var j=null; try{ j=await r.json(); }catch(e){ j={error:'Respuesta no legible ('+r.status+')'}; }
+  return {ok:r.ok,status:r.status,j:j};
+}
+
+function trabajando(b){ ['#bPing','#bCat','#bAlu','#bReb','#bDiag'].forEach(function(s){$(s).disabled=b}); $('#estado').textContent=b?'consultando…':''; }
+
+async function corre(accion,extra,alOk){
+  trabajando(true); msg('warn','Consultando a Playoff…'); $('#json').style.display='none';
+  var r=await api(accion,extra);
+  trabajando(false);
+  if(!r.ok){
+    var m=r.j&&r.j.error?r.j.error:('Error '+r.status);
+    if(r.j&&r.j.faltan) m+='<br>Faltan estas variables en Vercel: <b>'+r.j.faltan.join(', ')+'</b>';
+    msg('bad',m); vol(r.j); return null;
+  }
+  // Si el manejador devuelve true, ya ha pintado lo suyo y no volcamos el crudo.
+  if(alOk){ if(alOk(r.j)===true) return r.j; } else msg('ok','Correcto.');
+  vol(r.j);
+  return r.j;
+}
+
+var ALUMNOS=[];
+
+$('#bPing').onclick=function(){ corre('ping',{},function(j){ msg('ok','Conexión correcta con <b>'+j.host+'</b>. Playoff aceptó el usuario y devolvió un token. ('+j.ms+' ms)'); }); };
+$('#bCat').onclick=function(){ corre('catalogos',{},function(j){
+  var c=function(x){ return Array.isArray(x)?x.length:(x?'1':'0'); };
+  msg('ok','Catálogos: '+c(j.periodicitats)+' periodicidades · '+c(j.modalitats)+' modalidades · '+c(j.estats)+' estados de alumno · '+c(j.agrupacions)+' agrupaciones · '+c(j.activitats)+' actividades.');
+}); };
+$('#bAlu').onclick=function(){ corre('colegiats',{},function(j){
+  // Los mas recientes primero: son los que seguro tienen recibos.
+  var L=(j.colegiats||[]).slice().sort(function(a,b){ return String(b.dataAlta||'').localeCompare(String(a.dataAlta||'')); });
+  ALUMNOS=L.map(function(x){ return x.idColegiat||x.id; }).filter(Boolean);
+  var c=(j.colegiats&&j.colegiats[0])?Object.keys(j.colegiats[0]):[];
+  var alt=L[0]&&L[0].dataAlta?(' Alta más reciente: '+L[0].dataAlta+'.'):'';
+  msg('ok','Playoff devolvió <b>'+j.n+'</b> alumnos en '+j.paginas+' páginas. ('+j.ms+' ms)'+alt+'<br><span class="mut">Campos: '+c.join(', ')+'</span>');
+  // No volcamos la ficha: son datos personales de menores. Solo los campos.
+  var p=$('#json'); p.style.display='block'; p.textContent='Campos que trae cada alumno:\n\n'+c.join('\n');
+  return true;
+}); };
+$('#bDiag').onclick=function(){ corre('diag',ALUMNOS.length?{id:ALUMNOS[0]}:{},function(j){
+  var h='<b>Diagnóstico:</b> qué acepta Playoff y qué no.<table style="margin-top:8px"><tr><th>Petición</th><th class="n">Código</th><th class="n">Filas</th></tr>';
+  (j.pruebas||[]).forEach(function(p){
+    var ok=p.status>=200&&p.status<300;
+    h+='<tr><td><code>'+p.url+'</code></td><td class="n" style="color:'+(ok?'#27500A':'#A32D2D')+'"><b>'+p.status+'</b></td><td class="n">'+(p.n===null||p.n===undefined?'—':p.n)+'</td></tr>';
+  });
+  h+='</table>';
+  $('#salida').innerHTML='<div class="card" style="margin:8px 0">'+h+'</div>';
+  return true;
+}); };
+
+$('#bReb').onclick=function(){
+  if(!ALUMNOS.length){ msg('bad','Primero dale a «Ver alumnos», que necesito sus ids.'); return; }
+  corre('rebuts',{ids:ALUMNOS.slice(0,3).join(',')},function(j){
+    var R=j.rebuts||[];
+    var t=R.reduce(function(a,b){ return a+(Number(b.total)||0); },0);
+    msg('ok','<b>'+R.length+'</b> recibos de '+j.pedidos+' alumnos, suman '+t.toFixed(2).replace('.',',')+' €.'+(j.errores&&j.errores.length?' '+j.errores.length+' alumnos dieron error.':''));
+    var est={}; R.forEach(function(r){ est[r.estat||'(sin estado)']=(est[r.estat||'(sin estado)']||0)+1; });
+    var txt='Campos de cada recibo:\n'+(R[0]?Object.keys(R[0]).join(', '):'(ninguno)')+'\n\nEstados encontrados:\n';
+    Object.keys(est).forEach(function(k){ txt+='  '+k+': '+est[k]+'\n'; });
+    txt+='\nPrimeros conceptos (si sale un nombre, tápalo antes de mandarme la captura):\n';
+    R.slice(0,6).forEach(function(r){ txt+='  '+(r.dataEmissio||'?')+'  '+(Number(r.total)||0).toFixed(2)+' €  '+(r.estat||'')+'  '+(r.concepte||'')+'\n'; });
+    var p=$('#json'); p.style.display='block'; p.textContent=txt;
+    return true;
+  });
+};
+
+$('#bProbar').onclick=async function(){
+  var ruta=$('#ruta').value.trim(); if(!ruta){ $('#salida2').innerHTML='<div class="bad">Escribe una ruta, por ejemplo <code>colegiats/rebuts</code>.</div>'; return; }
+  $('#bProbar').disabled=true; $('#salida2').innerHTML='<div class="warn">Consultando…</div>';
+  var r=await api('probar',{ruta:ruta,qs:$('#qs').value.trim()});
+  $('#bProbar').disabled=false;
+  var p=r.j&&r.j.prueba;
+  if(!p){ $('#salida2').innerHTML='<div class="bad">'+((r.j&&r.j.error)||('Error '+r.status))+'</div>'; return; }
+  var ok=p.status>=200&&p.status<300;
+  $('#salida2').innerHTML='<div class="'+(ok?'ok':'bad')+'">Código <b>'+p.status+'</b>'+(p.n===null||p.n===undefined?'':' · <b>'+p.n+'</b> filas')+' · <code>'+p.url+'</code></div>';
+  var q=$('#json2'); q.style.display='block'; q.textContent=p.muestra||p.error||'(respuesta vacía)';
+};
+</script>
+</body>
+</html>
